@@ -1,0 +1,271 @@
+openapi: 3.0.1
+info:
+  title: Domain Lending Collateral Management API
+  description: "Orchestrates collateral cases through core-lending-collateral-management.\
+    \ It creates, updates, changes status, and closes collateral cases through the\
+    \ collateral core. Party, contract, and product identifiers stay UUIDs."
+  contact:
+    name: Firefly Software Foundation
+    email: dev@fireflysoftware.io
+  version: 1.0.0
+servers:
+- url: https://openplatform.fireflysoftware.io/domain-lending-collateral-management
+  description: Development Environment
+- url: /
+  description: Local Development Environment
+tags:
+- name: CollateralCases
+  description: Domain orchestration for collateral cases
+paths:
+  /api/v1/collateral-cases/{collateralCaseId}/status:
+    put:
+      tags:
+      - CollateralCases
+      summary: Update status
+      description: Runs the status saga against core-lending-collateral-management.
+      operationId: updateStatus
+      parameters:
+      - name: collateralCaseId
+        in: path
+        description: Core identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+        required: true
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralCaseDTO"
+        "404":
+          description: Not found
+  /api/v1/collateral-cases/{collateralCaseId}:
+    get:
+      tags:
+      - CollateralCases
+      summary: Get collateral case
+      description: Reads one record from core-lending-collateral-management.
+      operationId: get
+      parameters:
+      - name: collateralCaseId
+        in: path
+        description: Core identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralCaseDTO"
+        "404":
+          description: Not found
+    put:
+      tags:
+      - CollateralCases
+      summary: Update collateral case
+      description: Runs the update saga against core-lending-collateral-management.
+        Status is left unchanged.
+      operationId: update
+      parameters:
+      - name: collateralCaseId
+        in: path
+        description: Core identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollateralCaseDTO"
+        required: true
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralCaseDTO"
+        "404":
+          description: Not found
+    delete:
+      tags:
+      - CollateralCases
+      summary: Remove collateral case
+      description: Deletes the record through core-lending-collateral-management when
+        that core allows removal.
+      operationId: remove
+      parameters:
+      - name: collateralCaseId
+        in: path
+        description: Core identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Removed
+        "404":
+          description: Not found
+  /api/v1/collateral-cases/{collateralCaseId}/close:
+    post:
+      tags:
+      - CollateralCases
+      summary: Close collateral case
+      description: Closes a collateral case by writing RELEASED when the collateral
+        core allows that status.
+      operationId: close
+      parameters:
+      - name: collateralCaseId
+        in: path
+        description: Core identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+        required: true
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralCaseDTO"
+        "404":
+          description: Not found
+  /api/v1/collateral-cases:
+    post:
+      tags:
+      - CollateralCases
+      summary: Create collateral case
+      description: Runs the register saga against core-lending-collateral-management.
+      operationId: create
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollateralCaseDTO"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralCaseDTO"
+        "400":
+          description: Invalid request
+components:
+  schemas:
+    StatusChangeRequest:
+      type: object
+      properties:
+        status:
+          type: string
+        statusReason:
+          type: string
+    CollateralCaseDTO:
+      required:
+      - collateralStatus
+      - loanApplicationId
+      type: object
+      properties:
+        collateralCaseId:
+          type: string
+          format: uuid
+          nullable: true
+        loanApplicationId:
+          type: string
+          format: uuid
+        loanServicingCaseId:
+          type: string
+          format: uuid
+          nullable: true
+        referenceNumber:
+          type: string
+          nullable: true
+        collateralStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - RELEASED
+          - UNDER_REVIEW
+          - PENDING
+        remarks:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ReasonRequest:
+      type: object
+      properties:
+        statusReason:
+          type: string
